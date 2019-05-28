@@ -1,7 +1,10 @@
-#' caRamel
+#' MAIN FUNCTION: multi-objective optimizer
 #'
-#' R version of the multi-objective optimizer 'CaRaMEL' originally written for Scilab by Nicolas Le Moine
+#' Multi-objective optimizer. It requires to define a multi-objective function (func) to calibrate the model and bounds on the parameters to optimize.
 #'
+#' The optimizer was originally written for Scilab by Nicolas Le Moine.
+#' The algorithm is a hybrid of the MEAS algorithm (Efstratiadis and Koutsoyiannis (2005) <doi:10.13140/RG.2.2.32963.81446>) by using the directional search method based on the simplexes of the objective space 
+#'     and the epsilon-NGSA-II algorithm with the method of classification of the parameter vectors archiving management by epsilon-dominance (Reed and Devireddy <doi:10.1142/9789812567796_0004>).
 #' Documentation : "Principe de l'optimiseur CaRaMEL et illustration au travers d'exemples de parametres dans le cadre de la modelisation hydrologique conceptuelle"
 #'                 Frederic Hendrickx (EDF) and Nicolas Le Moine (UPMC)
 #'                 Report EDF H-P73-2014-09038-FR
@@ -19,11 +22,12 @@
 #' @param blocks (optional): groups for parameters
 #' @param pop : (matrix, nrow = nset, ncol = nvar or nvar+nobj ) optional, initial population (used to restart an optimization)
 #' @param funcinit (optional): the name of the initialization function applied on each node of cluster when parallel computation. The arguments are cl and numcores.
-#' @param noms_obj (optional): the name of the objectives
+#' @param objnames (optional): the name of the objectives
 #' @param listsave (optional): names of the listing files. Default: None (no output). If exists, fields to be defined: "pmt" (file of parameters on the Pareto Front), "obj" (file of corresponding objective values), "evol" (evolution of maximum objectives by generation). Optional field: "totalpop" (total population and corresponding objectives, useful to restart a computation)
 #' @param write_gen : (integer, length = 1) optional, if = 1, save files 'pmt' and 'obj' at each generation (= 0 by default)
 #' @param carallel : (logical, length = 1) optional, do parallel computations (TRUE by default)
 #' @param numcores : (integer, length = 1) optional, the number of cores for the parallel computations (all cores by default).
+#' @param graph : (logical, length = 1) optional, plot graphical output at each generation (TRUE by default).
 #
 ##' @return
 ##' List of five elements:
@@ -31,7 +35,7 @@
 ##' \item{success}{return value (logical, length = 1) : TRUE if successfull}
 ##' \item{parameters}{Pareto front (matrix, nrow = archsize, ncol = nvar)}
 ##' \item{objectives}{objectives of the Pareto front (matrix, nrow = archsize, ncol = nobj+nadditional)}
-##' \item{save_crit}{evolution of the maximum objectives}
+##' \item{save_crit}{evolution of the optimal objectives}
 ##' \item{total_pop}{total population (matrix, nrow = popsize+archsize, ncol = nvar+nobj+nadditional)}
 ##' }
 #' 
@@ -84,12 +88,15 @@ caRamel <-
            blocks = NULL,
            pop = NULL,
            funcinit = NULL,
-           noms_obj = NULL,
+           objnames = NULL,
            listsave = NULL,
            write_gen = 0,
            carallel = TRUE,
-           numcores = NULL) {
+           numcores = NULL,
+           graph = TRUE) {
     
+    start_time <- Sys.time()
+
     # Check the input arguments #
     #############################
     if (nobj <= 1) {
@@ -142,7 +149,7 @@ caRamel <-
       }
       initialise_calc<-1
     }
-    if (is.null(noms_obj)){noms_obj=paste("Obj",as.character(c(1:nobj)),sep="")}
+    if (is.null(objnames)){objnames=paste("Obj",as.character(c(1:nobj)),sep="")}
     writefile<-0
     if (!is.null(listsave)){
       if (class(listsave) != "list") {
@@ -232,7 +239,9 @@ caRamel <-
     }
     
     # Optimization
-    message("Beginning of optimization process")
+    message(paste("Beginning of caRamel optimization <--", date()))
+    message(paste("Number of variables :", as.character(nvar)))
+    message(paste("Number of functions :", as.character(nobj)))
     pb <- txtProgressBar(min=0, max=1,initial=0,title="caRamel progress :",label="caRamel progress :" , style=3)
     while (nrun < maxrun) {
       ngen <- ngen + 1
@@ -311,6 +320,7 @@ caRamel <-
       set_ok <- !rowSums(detect_nan)
       newfeval <- newfeval[set_ok, ]
       x <- x[set_ok, ]
+      additional_eval <- additional_eval[set_ok, ]
       probj <- probj[set_ok, ]
       pop1 <- rbind(pop, cbind(x, newfeval, additional_eval))
       
@@ -329,37 +339,19 @@ caRamel <-
       param_arch <- arch[, 1:nvar]
       crit_arch <- matrix(arch[, (nvar + 1):(nvar + nobj)], nrow=length(ind$arch), ncol=nobj)
       if (nadditional>0){
-        additional_eval[,1:ncol(additional_eval)] <- additional_eval[set_ok, 1:nadditional]
         additional_eval <- matrix(arch[, (nvar + nobj+1):(nvar + nobj+nadditional)], nrow=length(ind$arch), ncol=nadditional)
       }
       
       # Records on criteria
       a=c(lapply(c(1:nobj),function(i){max(crit_arch[,i])}))
-      maxcrit=as.data.frame(a,col.names = noms_obj)
+      maxcrit=as.data.frame(a,col.names = objnames)
       a=c(lapply(c(1:nobj),function(i){min(crit_arch[,i])}))
-      mincrit=as.data.frame(a,col.names = noms_obj)
+      mincrit=as.data.frame(a,col.names = objnames)
       crit=mincrit; crit[minmax]<-maxcrit[minmax]
       save_crit<-cbind(save_crit,c(nrun,t(crit)))
       
       # Graphs
-      info<-paste("ngen=",ngen,", nrun=",nrun,", gpp=",gpp,sep="")
-      nbre_fen = choose(n = nobj, k=2)+1
-      if (nbre_fen <= 4){
-        par(mfrow=c(2,2))
-      } else {
-        par(mfrow = c(3,floor(nbre_fen/3)+1))
-      }
-      l = seq(1,nobj)
-      for (i_fig in 1:(nobj-1)){
-        l_tmp = l[-i_fig]; l_tmp = l_tmp[l_tmp>i_fig]
-        for (i_fig2 in l_tmp){
-          plot(crit_arch[, i_fig], crit_arch[, i_fig2],xlab = noms_obj[i_fig],ylab = noms_obj[i_fig2])
-        }
-      }
-      plot(x=save_crit[1,],y=save_crit[2,], ylim=c(min(save_crit[-1,]),max(save_crit[-1,])),xlab = info, ylab = "Optimal Criteria")
-      lapply(c(2:nobj),function(i){points(x=save_crit[1,],y=save_crit[i+1,],col=i)})
-      xlgd <- popsize +(nrun-popsize)*2/3 ; ylgd <- min(save_crit[-1,]) + (max(save_crit[-1,])-min(save_crit[-1,]))/2
-      legend(xlgd,ylgd,legend=noms_obj,col=1:nobj,fill=1:nobj)
+      if (graph==TRUE) plot_population(MatObj = crit_arch,nobj,ngen,nrun,objnames,MatEvol = save_crit,popsize)
       
       # Online saves
       if (writefile == 1){
@@ -383,11 +375,17 @@ caRamel <-
     if (carallel==TRUE){stopCluster(cl)}
     close(pb)
     
+    end_time <- Sys.time()
+    message(paste("Done in", as.character(end_time-start_time), units(end_time-start_time), "-->", date()))
+    message(paste("Size of the Pareto front :", as.character(dim(param_arch)[1])))
+    message(paste("Number of calls :", as.character(nrun)))
+    
     return(list(
       "success" = TRUE,
       "parameters" = param_arch,
       "objectives" = cbind(crit_arch,additional_eval),
       "save_crit" = t(save_crit),
-      "total_pop"= pop
+      "total_pop"= pop,
+	  "gpp"=gpp
     ))
   }

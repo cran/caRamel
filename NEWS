@@ -1,6 +1,20 @@
 News of the caRamel package
 
-Version 2018.02-16
+Version 1.1
+===========
+* add vignettes
+* add plot functions (plot_caramel, plot_pareto)
+* add small complements in documentation
+* renaming of caRamel argument "noms_obj" as "objnames"
+* add caRamel argument "graph" to display graphical output
+
+Version 1.0
+===========
+* change version numbering (CRAN)
+* add small executable examples to all Rd files (CRAN)
+* add info on the method and references in the description file
+
+Version 0.0
 ==================
-* first open source release
+* first open source release (2018.02-16)
 

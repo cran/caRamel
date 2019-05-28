@@ -2,12 +2,12 @@
 % Please edit documentation in R/caRamel.R
 \name{caRamel}
 \alias{caRamel}
-\title{caRamel}
+\title{MAIN FUNCTION: multi-objective optimizer}
 \usage{
 caRamel(nobj, nvar, minmax, bounds, func, popsize, archsize, maxrun, prec,
   repart_gene = c(5, 5, 5, 5), gpp = NULL, blocks = NULL, pop = NULL,
-  funcinit = NULL, noms_obj = NULL, listsave = NULL, write_gen = 0,
-  carallel = TRUE, numcores = NULL)
+  funcinit = NULL, objnames = NULL, listsave = NULL, write_gen = 0,
+  carallel = TRUE, numcores = NULL, graph = TRUE)
 }
 \arguments{
 \item{nobj}{: (integer, length = 1) the number of objectives to optimize (nobj >= 2)}
@@ -38,7 +38,7 @@ caRamel(nobj, nvar, minmax, bounds, func, popsize, archsize, maxrun, prec,
 
 \item{funcinit}{(optional): the name of the initialization function applied on each node of cluster when parallel computation. The arguments are cl and numcores.}
 
-\item{noms_obj}{(optional): the name of the objectives}
+\item{objnames}{(optional): the name of the objectives}
 
 \item{listsave}{(optional): names of the listing files. Default: None (no output). If exists, fields to be defined: "pmt" (file of parameters on the Pareto Front), "obj" (file of corresponding objective values), "evol" (evolution of maximum objectives by generation). Optional field: "totalpop" (total population and corresponding objectives, useful to restart a computation)}
 
@@ -47,6 +47,8 @@ caRamel(nobj, nvar, minmax, bounds, func, popsize, archsize, maxrun, prec,
 \item{carallel}{: (logical, length = 1) optional, do parallel computations (TRUE by default)}
 
 \item{numcores}{: (integer, length = 1) optional, the number of cores for the parallel computations (all cores by default).}
+
+\item{graph}{: (logical, length = 1) optional, plot graphical output at each generation (TRUE by default).}
 }
 \value{
 List of five elements:
@@ -54,14 +56,17 @@ List of five elements:
 \item{success}{return value (logical, length = 1) : TRUE if successfull}
 \item{parameters}{Pareto front (matrix, nrow = archsize, ncol = nvar)}
 \item{objectives}{objectives of the Pareto front (matrix, nrow = archsize, ncol = nobj+nadditional)}
-\item{save_crit}{evolution of the maximum objectives}
+\item{save_crit}{evolution of the optimal objectives}
 \item{total_pop}{total population (matrix, nrow = popsize+archsize, ncol = nvar+nobj+nadditional)}
 }
 }
 \description{
-R version of the multi-objective optimizer 'CaRaMEL' originally written for Scilab by Nicolas Le Moine
+Multi-objective optimizer. It requires to define a multi-objective function (func) to calibrate the model and bounds on the parameters to optimize.
 }
 \details{
+The optimizer was originally written for Scilab by Nicolas Le Moine.
+The algorithm is a hybrid of the MEAS algorithm (Efstratiadis and Koutsoyiannis (2005) <doi:10.13140/RG.2.2.32963.81446>) by using the directional search method based on the simplexes of the objective space 
+    and the epsilon-NGSA-II algorithm with the method of classification of the parameter vectors archiving management by epsilon-dominance (Reed and Devireddy <doi:10.1142/9789812567796_0004>).
 Documentation : "Principe de l'optimiseur CaRaMEL et illustration au travers d'exemples de parametres dans le cadre de la modelisation hydrologique conceptuelle"
                 Frederic Hendrickx (EDF) and Nicolas Le Moine (UPMC)
                 Report EDF H-P73-2014-09038-FR
