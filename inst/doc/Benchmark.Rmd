@@ -1,11 +1,11 @@
 ---
-title: "using caRamel"
+title: "using caRamel on two benchmark tests"
 author: "Fabrice Zaoui"
 date: "January 19 2018"
 output: html_document
 vignette: >
   %\VignetteEngine{knitr::rmarkdown}
-  %\VignetteIndexEntry{Using the caRamel R package: simple test functions}
+  %\VignetteIndexEntry{Simple test functions}
   %\VignetteEncoding{UTF-8}
 ---
 
