@@ -22,10 +22,12 @@ caRamel(
   objnames = NULL,
   listsave = NULL,
   write_gen = FALSE,
-  carallel = TRUE,
+  carallel = 1,
   numcores = NULL,
   graph = TRUE,
-  sensitivity = FALSE
+  sensitivity = FALSE,
+  verbose = TRUE,
+  worklist = NULL
 )
 }
 \arguments{
@@ -37,7 +39,7 @@ caRamel(
 
 \item{bounds}{: (matrix, nrow = nvar, ncol = 2) lower and upper bounds for the variables}
 
-\item{func}{: the name of the objective function to optimize. Input argument is the number of parameter set (integer) in the x matrix. The function has to return a vector of at least 'nobj' values (Objectives 1 to nobj are used for optimization, values after nobj are recorded for information.).}
+\item{func}{: (function) the objective function to optimize. Input argument is the number of parameter set (integer) in the x matrix. The function has to return a vector of at least 'nobj' values (Objectives 1 to nobj are used for optimization, values after nobj are recorded for information.).}
 
 \item{popsize}{: (integer, length = 1) the population size for the genetic algorithm}
 
@@ -55,24 +57,28 @@ caRamel(
 
 \item{pop}{: (matrix, nrow = nset, ncol = nvar or nvar+nobj ) optional, initial population (used to restart an optimization)}
 
-\item{funcinit}{(optional): the name of the initialization function applied on each node of cluster when parallel computation. The arguments are cl and numcores}
+\item{funcinit}{(function, optional): the initialization function applied on each node of cluster when parallel computation. The arguments are cl and numcores}
 
-\item{objnames}{(optional): the name of the objectives}
+\item{objnames}{(optional): names of the objectives}
 
 \item{listsave}{(optional): names of the listing files. Default: None (no output). If exists, fields to be defined: "pmt" (file of parameters on the Pareto Front), "obj" (file of corresponding objective values), "evol" (evolution of maximum objectives by generation). Optional field: "totalpop" (total population and corresponding objectives, useful to restart a computation)}
 
 \item{write_gen}{: (logical, length = 1) optional, if TRUE, save files 'pmt' and 'obj' at each generation (FALSE by default)}
 
-\item{carallel}{: (logical, length = 1) optional, do parallel computations (TRUE by default)}
+\item{carallel}{: (integer, length = 1) optional, do parallel computations? (0: sequential, 1:parallel (default) , 2:user-defined choice)}
 
 \item{numcores}{: (integer, length = 1) optional, the number of cores for the parallel computations (all cores by default)}
 
 \item{graph}{: (logical, length = 1) optional, plot graphical output at each generation (TRUE by default)}
 
 \item{sensitivity}{: (logical, length = 1) optional, compute the first order derivatives of the pareto front (FALSE by default)}
+
+\item{verbose}{: (logical, length = 1) optional, verbosity mode (TRUE by default)}
+
+\item{worklist}{: optional values to be transmitted to the user's function (not used)}
 }
 \value{
-List of five elements:
+List of seven elements:
 \describe{
 \item{success}{return value (logical, length = 1) : TRUE if successfull}
 \item{parameters}{Pareto front (matrix, nrow = archsize, ncol = nvar)}
@@ -80,6 +86,7 @@ List of five elements:
 \item{derivatives}{list of the Jacobian matrices of the Pareto front if the sensitivity parameter is TRUE or NA otherwise}
 \item{save_crit}{evolution of the optimal objectives}
 \item{total_pop}{total population (matrix, nrow = popsize+archsize, ncol = nvar+nobj+nadditional)}
+\item{gpp}{the calling period for the third generation rule (independent sampling with a priori parameters variance)}
 }
 }
 \description{
@@ -87,11 +94,11 @@ Multi-objective optimizer. It requires to define a multi-objective function (fun
 }
 \details{
 The optimizer was originally written for Scilab by Nicolas Le Moine.
-The algorithm is a hybrid of the MEAS algorithm (Efstratiadis and Koutsoyiannis (2005) <doi:10.13140/RG.2.2.32963.81446>) by using the directional search method based on the simplexes of the objective space 
+The algorithm is a hybrid of the MEAS algorithm (Efstratiadis and Koutsoyiannis (2005) <doi:10.13140/RG.2.2.32963.81446>) by using the directional search method based on the simplexes of the objective space
     and the epsilon-NGSA-II algorithm with the method of classification of the parameter vectors archiving management by epsilon-dominance (Reed and Devireddy <doi:10.1142/9789812567796_0004>).
 Reference : "Multi-objective calibration by combination of stochastic and gradient-like parameter generation rules – the caRamel algorithm"
             Celine Monteil (EDF), Fabrice Zaoui (EDF), Nicolas Le Moine (UPMC) and Frederic Hendrickx (EDF)
-            June 2020 Hydrology and Earth System Sciences 24(6):3189-3209  
+            June 2020 Hydrology and Earth System Sciences 24(6):3189-3209
             DOI: 10.5194/hess-24-3189-2020
 Documentation : "Principe de l'optimiseur CaRaMEL et illustration au travers d'exemples de parametres dans le cadre de la modelisation hydrologique conceptuelle"
                 Frederic Hendrickx (EDF) and Nicolas Le Moine (UPMC)
@@ -127,7 +134,7 @@ results <-
           archsize = 100,
           maxrun = 500,
           prec = matrix(1.e-3, nrow = 1, ncol = nobj),
-          carallel = FALSE)
+          carallel = 0)
 
 }
 \author{
